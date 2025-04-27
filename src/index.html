@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>StudyDeck Generator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Comfortaa font from Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@300;400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Comfortaa', Arial, sans-serif;
+      background-color: #F5F7FA;
+      color: #000;
+      text-align: center;
+      margin: 40px 20px;
+    }
+    h1 {
+      font-family: 'Comfortaa', Arial, sans-serif;
+      font-weight: 700;
+      font-size: 2.5rem;
+      margin-bottom: 20px;
+      color: #6E41E2;
+      letter-spacing: 1px;
+    }
+    textarea {
+      width: 95%;
+      max-width: 900px;
+      height: 250px;
+      padding: 15px;
+      font-size: 0.85rem;
+      letter-spacing: 0.05em;
+      border: 1.5px solid #D6C9F8;
+      border-radius: 10px;
+      resize: vertical;
+      box-sizing: border-box;
+      margin-bottom: 20px;
+      font-family: 'Comfortaa', Arial, sans-serif;
+      color: #000;
+      background-color: #fff;
+      transition: border-color 0.2s;
+    }
+    textarea:focus {
+      outline: none;
+      border-color: #6E41E2;
+      box-shadow: 0 0 0 2px #6E41E233;
+    }
+    #generateFlashcards {
+      background-color: #6E41E2;
+      color: #fff;
+      border: none;
+      padding: 14px 32px;
+      font-size: 1.1rem;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background-color 0.3s, box-shadow 0.3s;
+      box-shadow: 0 4px 12px rgba(74,14,78,0.15);
+      font-weight: 700;
+      margin-bottom: 40px;
+      font-family: 'Comfortaa', Arial, sans-serif;
+      letter-spacing: 1px;
+    }
+    #generateFlashcards:hover {
+      background-color: #551A8B;
+      box-shadow: 0 6px 16px rgba(74,14,78,0.22);
+    }
+    #flashcardsContainer {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 28px;
+      justify-items: center;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+    .flashcard {
+      perspective: 1000px;
+      width: 300px;
+      height: 170px;
+      margin-bottom: 10px;
+    }
+    .flashcard-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      border-radius: 16px;
+      box-shadow: 0 4px 16px rgba(110,65,226,0.15);
+      transition: transform 0.6s cubic-bezier(.4,2.3,.3,1);
+      transform-style: preserve-3d;
+      cursor: pointer;
+      background-color: white;
+      min-height: 140px;
+    }
+    .flashcard.flipped .flashcard-inner {
+      transform: rotateY(180deg);
+    }
+    .flashcard-front,
+    .flashcard-back {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 16px;
+      backface-visibility: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      box-sizing: border-box;
+      font-weight: 500;
+      color: #000;
+      user-select: none;
+      word-break: break-word;
+      transition: background 0.3s;
+    }
+    .flashcard-front {
+      background-color: #fff;
+      border: 2px solid #D6C9F8;
+      font-size: 1rem;
+      color: #000;
+    }
+    .flashcard-back {
+      background: linear-gradient(135deg, #6E41E2 70%, #551A8B 100%);
+      color: #fff;
+      font-weight: 700;
+      font-size: 1.15rem;
+      transform: rotateY(180deg);
+      border: 2px solid #4A0E4E;
+      box-shadow: 0 2px 16px #6E41E244;
+    }
+    @media (max-width: 600px) {
+      textarea {
+        width: 98%;
+        font-size: 0.85rem;
+      }
+      .flashcard {
+        width: 98vw;
+        min-width: 0;
+        max-width: 98vw;
+      }
+      #flashcardsContainer {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>StudyDeck Generator</h1>
+  <textarea id="notesInput" rows="12" cols="80" placeholder="Paste your notes here..."></textarea><br><br>
+  <button id="generateFlashcards">Generate Flashcards</button>
+  <div id="flashcardsContainer"></div>
+  <script>
+    // Expanded verb/adjective blacklist for better accuracy
+    const verbsAndAdjectives = [
+      "is","are","was","were","be","being","been","have","has","had","do","does","did","make","makes","made","go","goes","went","gone",
+      "see","sees","saw","seen","know","knows","knew","known","get","gets","got","gotten","take","takes","took","taken","come","comes","came","coming",
+      "think","thinks","thought","say","says","said","give","gives","gave","given","find","finds","found","use","uses","used","work","works","worked",
+      "like","likes","liked","want","wants","wanted","look","looks","looked","call","calls","called","try","tries","tried","ask","asks","asked",
+      "need","needs","needed","feel","feels","felt","become","becomes","became","leave","leaves","left","put","puts","keep","keeps","kept","let","lets",
+      "begin","begins","began","begun","seem","seems","seemed","help","helps","helped","show","shows","showed","shown","hear","hears","heard","play","plays","played",
+      "run","runs","ran","move","moves","moved","live","lives","lived","believe","believes","believed","bring","brings","brought","happen","happens","happened",
+      "write","writes","wrote","written","provide","provides","provided","sit","sits","sat","stand","stands","stood","lose","loses","lost","pay","pays","paid",
+      "meet","meets","met","include","includes","included","continue","continues","continued","set","sets","learn","learns","learned","change","changes","changed",
+      "lead","leads","led","understand","understands","understood","watch","watches","watched","follow","follows","followed","stop","stops","stopped",
+      "create","creates","created","speak","speaks","spoke","spoken","read","reads","read","allow","allows","allowed","add","adds","added","spend","spends","spent",
+      "grow","grows","grew","grown","open","opens","opened","walk","walks","walked","win","wins","won","offer","offers","offered","remember","remembers","remembered",
+      "love","loves","loved","consider","considers","considered","appear","appears","appeared","buy","buys","bought","wait","waits","waited","serve","serves","served",
+      "die","dies","died","send","sends","sent","expect","expects","expected","build","builds","built","stay","stays","stayed","fall","falls","fell","fallen",
+      "cut","cuts","cut","reach","reaches","reached","kill","kills","killed","remain","remains","remained",
+      // adjectives
+      "good","new","first","last","long","great","little","own","other","old","right","big","high","different","small","large","next","early","young","important","few","public",
+      "bad","same","able"
+    ];
+
+    // Expanded stopwords list
+    const stopwords = [
+      'the', 'a', 'an', 'and', 'or', 'but', 'if', 'then', 'so', 'because', 'of', 'in', 'on', 'at', 'by', 'with', 'to', 'for', 'from', 'as', 'that', 'this', 'these', 'those',
+      'it', 'its', 'their', 'his', 'her', 'our', 'your', 'my', 'i', 'you', 'he', 'she', 'we', 'they', 'them', 'me', 'him', 'who', 'whom', 'which', 'what', 'when', 'where', 'why', 'how',
+      'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'shall', 'should', 'can', 'could', 'may', 'might', 'must', 'ought',
+      // domain stopwords
+      'law', 'object', 'cell', 'cells', 'thing', 'stuff', 'motion', 'body', 'state', 'process', 'cycle', 'play', 'water', 'air', 'place'
+    ];
+
+    function extractMissingWord(sentence) {
+      // 1. Numbers (including decimals, negatives, and commas)
+      const numberMatch = sentence.match(/-?\d[\d,]*(\.\d+)?/);
+      if (numberMatch) return numberMatch[0];
+
+      // 2. Proper noun: first capitalized word (not first word, not all caps)
+      const words = sentence.split(/\s+/);
+      for (let i = 1; i < words.length; i++) {
+        const word = words[i].replace(/[^\w]/g, '');
+        if (
+          word.length > 1 &&
+          /^[A-Z][a-z]+$/.test(word)
+        ) {
+          return word;
+        }
+      }
+
+      // 3. First noun-like word (not a verb/adjective/stopword, >3 chars)
+      for (let i = 0; i < words.length; i++) {
+        const clean = words[i].replace(/[^\w]/g, '');
+        if (
+          clean.length > 3 &&
+          !stopwords.includes(clean.toLowerCase()) &&
+          !verbsAndAdjectives.includes(clean.toLowerCase())
+        ) {
+          return clean;
+        }
+      }
+
+      return null;
+    }
+
+    document.getElementById("generateFlashcards").addEventListener("click", () => {
+      const notes = document.getElementById("notesInput").value;
+      const sentences = notes.split('.').map(s => s.trim()).filter(s => s.length > 0);
+
+      const container = document.getElementById("flashcardsContainer");
+      container.innerHTML = "";
+
+      sentences.forEach(sentence => {
+        const missingWord = extractMissingWord(sentence);
+        if (!missingWord) return;
+        const regex = new RegExp(`\\b${missingWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+        const question = sentence.replace(regex, "_____");
+
+        const card = document.createElement("div");
+        card.className = "flashcard";
+
+        const inner = document.createElement("div");
+        inner.className = "flashcard-inner";
+
+        const front = document.createElement("div");
+        front.className = "flashcard-front";
+        front.textContent = question;
+
+        const back = document.createElement("div");
+        back.className = "flashcard-back";
+        back.textContent = missingWord;
+
+        inner.appendChild(front);
+        inner.appendChild(back);
+        card.appendChild(inner);
+
+        card.addEventListener("click", function() {
+          card.classList.toggle("flipped");
+        });
+
+        container.appendChild(card);
+      });
+    });
+  </script>
+</body>
+</html>
